@@ -1,0 +1,915 @@
+using System;
+using System.Linq;
+using System.IO;
+using System.Text;
+using System.Collections;
+using System.Collections.Generic;
+
+/**
+ * Auto-generated code below aims at helping you parse
+ * the standard input according to the problem statement.
+ **/
+public class State 
+{
+  public List<MyBot> myBots {get; set;} = new();
+  public List<(int y,int x)> enemyBot {get; set;} = new();
+  public List<(int y,int x)> unOccupied {get; set;} = new();
+  public List<(int y,int x)> canBuildRecycler {get; set;} = new();
+  public List<(int y,int x)> canSpawnBot {get; set;} = new();
+  public Dictionary<(int y,int x),bool> allRescylesOnMap {get; set;} = new();
+  public (int y, int x,bool visited) visited {get; set;} = new();
+  public Dictionary<(int y,int x),(int owner,int recycler, int scrapAmount,int inRangeOfRecycler)> state {get; set;} = new();
+  public int height {get; set;}
+  public int width {get; set;}
+  public int myMatter {get; set;}
+  public int oppMatter {get; set;}
+}
+
+public class MyBot
+{
+    public (int y, int x) Location {get; set;}
+    public (int y,int x) EnemeyLocation {get; set;}
+    public (int y,int x) TargetLocation {get; set;}
+    public bool occupied {get; set;}
+}
+
+public class Player
+{
+    static Action<string> cw = Console.WriteLine;
+    static Action<string> err = Console.Error.WriteLine;
+
+    public State globalState = new();
+
+    static void Main(string[] args)
+    {        
+        string[] inputs;
+        inputs = Console.ReadLine().Split(' ');
+
+        int width = int.Parse(inputs[0]);
+        int height = int.Parse(inputs[1]);
+        const int canDoAction = 1;
+        const int neutralLocation = -1;
+
+        // game loop
+        while (true)
+        {
+            inputs = Console.ReadLine().Split(' ');
+
+            int myMatter = int.Parse(inputs[0]);
+            int oppMatter = int.Parse(inputs[1]);
+
+            string command = string.Empty;
+            var gameState = new State();
+            gameState.height = height;
+            gameState.width = width;
+            gameState.myMatter = myMatter;
+            gameState.oppMatter = oppMatter;
+            string step = string.Empty;
+
+            //int[,] map = new int[height,width];
+
+            for (int x = 0; x < height; x++)
+            {
+                for (int y = 0; y < width; y++)
+                {
+                    inputs = Console.ReadLine().Split(' ');
+                    int scrapAmount = int.Parse(inputs[0]);
+                    int owner = int.Parse(inputs[1]);   
+                    int units = int.Parse(inputs[2]);
+                    int recycler = int.Parse(inputs[3]);
+                    int canBuild = int.Parse(inputs[4]);
+                    int canSpawn = int.Parse(inputs[5]); 
+                    int inRangeOfRecycler = int.Parse(inputs[6]);
+
+                    gameState.state[(y,x)] = (owner,recycler, scrapAmount, inRangeOfRecycler);
+
+
+                  // build recyler
+                  if (canBuildRecylcerInHere(canBuild) &&
+                      hasNoRecyler(recycler) &&
+                      hasNoUnits(units) &&
+                      (owner == 1))
+                  {
+                    gameState.canBuildRecycler.Add((y,x));
+                  }
+
+                  // add all the location of recycles
+                  if (recycler == 1 && scrapAmount > 1)
+                  {
+                    gameState.allRescylesOnMap.Add((y,x),true);
+                  }
+                  else 
+                  {
+                    gameState.allRescylesOnMap.Add((y,x),false);
+                  }
+
+                  // can spwan the bot
+                  if (canSpwan(canSpawn) &&
+                      iAmTheOwner(owner) &&
+                      IsNotGrassTile(scrapAmount) && 
+                      hasNoRecyler(recycler))
+                  {
+                    gameState.canSpawnBot.Add((y,x));
+                  }
+
+                  // add my bots
+                   if (owner == 1)
+                   {
+                      if (units > 1)
+                      {
+                        for (var i = 0;i < units;i++)
+                        {
+                          gameState.myBots.Add(new(){
+                            EnemeyLocation = (-1,-1),
+                            occupied = false,
+                            Location = (y,x),                            
+                          });
+                        }
+                      }
+                      else if (units == 1)
+                      {
+                        gameState.myBots.Add(new(){
+                            EnemeyLocation = (-1,-1),
+                            occupied = false,
+                            Location = (y,x),                            
+                          });
+                      }
+                   }
+
+                  if ((hasNoOwner(owner) || iAmNotTheOwner(owner)) &&
+                      hasNoUnits(units)  &&
+                      IsNotGrassTile(scrapAmount) && 
+                      hasNoRecyler(recycler))
+                  {
+                    gameState.unOccupied.Add((y,x));       
+                  }
+
+                  // add enemy bots
+                  if (owner == 0)
+                  {
+                    if (units > 1)
+                      {
+                        for (var i = 0;i < units;i++)
+                        {
+                          gameState.enemyBot.Add((y,x));
+                        }
+                      }
+                      else if (units == 1)
+                      {
+                        gameState.enemyBot.Add((y,x));
+                      }     
+                  }
+
+                }
+            }
+           
+            //err($"print map \n {printMap(height,width)}");
+            // err($"all of my bots: - {gameState.myBots.Count()}");
+            // err($"all of my enemy bots: - {gameState.enemyBot.Count()}");
+            // err($"build recycler: - {gameState.canBuildRecycler.Count()}");
+            // err($"can i spwan: - {gameState.canSpawnBot.Count()}");
+            // {CanBuild(gameState,myMatter < oppMatter)}
+            //err($"{printUnoccupiedmap(gameState)}");
+            //err($"{PrintScrapAmountMap(gameState)}");
+            step = $"{GamePlay(gameState)}";
+            //isRowONmapisAllGrass(gameState);
+            if (step.Length > 0)
+            {
+              cw(step);
+            }
+            else 
+            {
+              cw("WAIT");
+            }            
+        }
+
+        bool IsNotGrassTile(int scrapAmount) => scrapAmount > 0;
+        bool hasNoRecyler(int recycler) => recycler == 0;
+        bool hasNoUnits(int units) => units == 0;
+        bool hasNoOwner(int owner) => owner == neutralLocation;
+        bool iAmTheOwner(int owner) => owner == 1;
+        bool iAmNotTheOwner(int owner) => owner == 0;
+        bool enoughMatter(int matter) => matter >= 10;
+        bool canSpwan(int canSpawn) => canSpawn == canDoAction;
+        bool canBuildRecylcerInHere(int canBuild) => canBuild == canDoAction;
+        //bool enemyBotsLocation(int owner, int units) => owner == 0 && units >= 1;
+        //bool myBotsLocation(int owner,int units) => owner == 1 && units > 0;
+    }
+
+    public static bool isRowONmapisAllGrass(State gameState)
+    {
+      string map = "";
+      for (int x = 0; x < gameState.width-1;x++)
+      {
+        List<bool> allgreen = new();
+
+        for (int y = 0; y < gameState.height-1; y++)
+        {
+           (int owner,int recycler, int scrapAmount,int inRangeOfRecycler) = gameState.state[(x,y)];
+           if (scrapAmount == 0 || recycler == 1 || inRangeOfRecycler == 1)
+            {
+              //err($"({x},{y})");
+              map += $"."; 
+              allgreen.Add(true);
+            }
+            else{
+             map += $" "; 
+              allgreen.Add(false);
+            }
+        }
+
+        if(allgreen.Where(x => x == true).Count() == gameState.height-1) {
+          // err("--TRUE---");
+           return true;
+        };
+
+        map += "\n";
+      }
+      ///err($"{map}");
+      return false;
+    }
+
+
+    public static string GamePlay(State gameState)
+    {
+        string command = "";
+
+       command += nearByUnoccpied(gameState);
+
+      // if(isRowONmapisAllGrass(gameState))
+      // {
+      //    command += nearByUnoccpied(gameState);
+      // }
+
+
+        // move
+      command += KillEnemy(gameState);
+
+       //occupiy
+       if (gameState.myBots.Any(x => !x.occupied))
+       {
+         command += Occupy(gameState);
+       }
+
+
+        // build
+        command += CanBuild(gameState);
+
+        // spwan
+        command += CanSpwan(gameState);
+        return command;
+    }
+
+     public static string KillNearByEnemy(State gameState)
+    {
+        var command = string.Empty;
+        var wilKill = 0;
+
+        //err($"mybots Count {gameState.myBots.Count() },enemey bots count {gameState.enemyBot.Count() }");
+
+
+        // attach my bot too each enemybot
+        for (int i = 0;i < gameState.enemyBot.Count();i++)
+        {
+            // if my bots are less than the enemeyBot just continue/skip the 1:1 attachment
+            if (gameState.myBots.Count() <= i)
+            {
+                continue;
+            }
+
+            // if this bot is already attached to the same bot
+            // 
+            if(gameState.myBots[i].EnemeyLocation != (gameState.enemyBot[i].y,gameState.enemyBot[i].x) &&
+              gameState.myBots[i].TargetLocation != (gameState.enemyBot[i].y,gameState.enemyBot[i].x))
+            {
+                command += $"MOVE 1 {gameState.myBots[i].Location.y} {gameState.myBots[i].Location.x} ";
+                command += $"{gameState.enemyBot[i].y} {gameState.enemyBot[i].x}"; 
+
+                gameState.myBots[i].EnemeyLocation = (gameState.enemyBot[i].y,gameState.enemyBot[i].x);
+                gameState.myBots[i].occupied = true;
+                wilKill++;
+
+                if (i < gameState.myBots.Count()-1)
+                {
+                    command += ";";
+                }
+                else if (gameState.canSpawnBot.Any())
+                {
+                    command += ";";
+                }           
+            }
+        }
+
+
+        err($"willkill {wilKill}, unoccupied bots {gameState.myBots.Count(x => !x.occupied)}");
+
+        return command;
+    }
+   
+    public static string KillEnemy(State gameState)
+    {
+        var command = string.Empty;
+        var wilKill = 0;
+
+        //err($"mybots Count {gameState.myBots.Count() },enemey bots count {gameState.enemyBot.Count() }");
+
+
+        // attach my bot too each enemybot
+        for (int i = 0;i < gameState.enemyBot.Count();i++)
+        {
+            // if my bots are less than the enemeyBot just continue/skip the 1:1 attachment
+            if (gameState.myBots.Count() <= i)
+            {
+                continue;
+            }
+
+            // if this bot is already attached to the same bot
+            // 
+            if(gameState.myBots[i].EnemeyLocation != (gameState.enemyBot[i].y,gameState.enemyBot[i].x) &&
+              gameState.myBots[i].TargetLocation != (gameState.enemyBot[i].y,gameState.enemyBot[i].x))
+            {
+                command += $"MOVE 1 {gameState.myBots[i].Location.y} {gameState.myBots[i].Location.x} ";
+                command += $"{gameState.enemyBot[i].y} {gameState.enemyBot[i].x}"; 
+
+                gameState.myBots[i].EnemeyLocation = (gameState.enemyBot[i].y,gameState.enemyBot[i].x);
+                gameState.myBots[i].occupied = true;
+                wilKill++;
+
+                if (i < gameState.myBots.Count()-1)
+                {
+                    command += ";";
+                }
+                else if (gameState.canSpawnBot.Any())
+                {
+                    command += ";";
+                }           
+            }
+        }
+
+
+        err($"willkill {wilKill}, unoccupied bots {gameState.myBots.Count(x => !x.occupied)}");
+
+        return command;
+    }
+
+    public static string nearByUnoccpied(State gameState)
+    {
+      //err($"all of my bots: - {gameState.myBots.Count()}");
+      var command = string.Empty;     
+      int willOccupy = 0;      
+      int unOccupiedBots =  gameState.myBots.Count(x => !x.occupied);
+
+      if (unOccupiedBots > 0)
+      {
+        for (int i = 0;i < unOccupiedBots ;i++)
+        {
+          if (i > gameState.unOccupied.Count())
+          {
+            continue;
+          }
+
+          // check which bot is next to a unoccpied tail
+
+
+          var unoccupiedBotLocation =  gameState.myBots.FirstOrDefault(t => !t.occupied);
+          var isNearMe = isNearMeUnoccpied(unoccupiedBotLocation.Location.y,
+          unoccupiedBotLocation.Location.x,gameState,gameState.width);
+
+           //err($"boot {i}  can move {isNearMe.canMove}");
+
+            if(isNearMe.canMove &&
+               unoccupiedBotLocation.TargetLocation != (isNearMe.y,isNearMe.x))
+            {
+                command += $"MOVE 1 {unoccupiedBotLocation.Location.y} {unoccupiedBotLocation.Location.x} ";
+                command += $"{isNearMe.y} {isNearMe.x}";
+
+                unoccupiedBotLocation.TargetLocation = (isNearMe.y,isNearMe.x);
+                unoccupiedBotLocation.occupied = true;
+                willOccupy++;
+
+                if (i < gameState.myBots.Count()-1)
+                {
+                command += ";";
+                }
+                else if (gameState.canSpawnBot.Any())
+                {
+                command += ";";
+                }          
+            }
+        }
+
+        err($"willOccupy {willOccupy}, unoccupied bots {gameState.myBots.Count(x => !x.occupied)}, unoccupied loaations {gameState.unOccupied.Count()}");
+      }
+
+      return command;
+    }
+
+    public static string Occupy(State gameState)
+    {
+      //err($"all of my bots: - {gameState.myBots.Count()}");
+      var command = string.Empty;     
+      int willOccupy = 0;       
+       int unOccupiedBots =  gameState.myBots.Count(x => !x.occupied);
+
+      if (unOccupiedBots > 0 && 
+          gameState.unOccupied.Any())
+      {
+        //err($"unoccupid mybots Count {gameState.myBots.Count(x => !x.occupied) },unoccupied cound { gameState.unOccupied.Count() }");
+
+        //var unoccupiedBots = gameState.myBots.Where(x => !x.occupied);
+        for (int i = 0;i < Math.Min(unOccupiedBots,gameState.unOccupied.Count()) ;i++)
+        {
+          var myUnoccupiedBot = gameState.myBots.FirstOrDefault(t => !t.occupied);
+
+           if(myUnoccupiedBot.TargetLocation != (gameState.unOccupied[i].y,gameState.unOccupied[i].x))
+            {
+                command += $"MOVE 1 {myUnoccupiedBot.Location.y} {myUnoccupiedBot.Location.x} ";
+                command += $"{gameState.unOccupied[i].y} {gameState.unOccupied[i].x}";
+
+                myUnoccupiedBot.TargetLocation = (gameState.unOccupied[i].y,gameState.unOccupied[i].x);
+                myUnoccupiedBot.occupied = true;
+                willOccupy++;
+
+                if (i < gameState.myBots.Count()-1)
+                {
+                command += ";";
+                }
+                else if (gameState.canSpawnBot.Any())
+                {
+                command += ";";
+                }          
+            }
+        }
+
+        err($"willOccupy {willOccupy}, unoccupied bots {gameState.myBots.Count(x => !x.occupied)}, unoccupied loaations {gameState.unOccupied.Count()}");
+      }
+
+      return command;
+    }
+
+    public static string CanSpwan(State gameState)
+    {      
+        //err($"can spawn - {gameState.canSpawnBot.Count()}");
+        var command = string.Empty;
+
+        // if i am dead completly.      
+        if (gameState.myBots.Count() == 0)
+        {
+            for (int x = 0; x < gameState.height; x++)
+            {
+                for (int y = 0; y < gameState.width; y++)
+                { 
+                    var (owner, recycler, scrapAmount, inrange) = gameState.state[(y,x)];
+
+                    if (owner == 1 && recycler == 0 && scrapAmount > 0) {
+
+                        command += $"SPAWN 1 {y} {x};";
+
+                        //
+                        nearByUnoccpied(gameState);
+
+                        //gameState.myBots.Add((y,x,false));                 
+
+                    }
+
+                }
+            }
+        }     
+      
+      foreach(var canSpawn in gameState.canSpawnBot) 
+      {
+
+        // if any enemy near by we will spwan there.  
+        //if ()     
+
+
+        // if any unoccpied tiels we will spwan there.
+
+        if (isRowONmapisAllGrass(gameState))
+        {
+          // spwan randomely on occpied locations
+          command += SpwanRandome(gameState,canSpawn);          
+        }
+
+        // if not all spwan random.
+       command += SpwanRandomeONanyofMyBots(gameState,canSpawn);
+
+        // spwan randomely on occpied locations
+          command += SpwanRandome(gameState,canSpawn); 
+      }
+
+      return command;
+    }
+
+    public static string SpwanRandome(State gameState,(int y, int x) canSpawn)
+    {
+      var command = string.Empty;
+
+      var randomeSpwanLocation = gameState.canSpawnBot.OrderBy(qu => Guid.NewGuid()).First();
+
+        if (gameState.myMatter >= 10)
+        {
+          if (!skipSpwan(randomeSpwanLocation.y,randomeSpwanLocation.x,gameState))
+          {
+             //err("spwan");
+
+            //nearMe2BlockGrass(randomeSpwanLocation.y,randomeSpwanLocation.x,gameState);
+           // err($"spwan randome : ({randomeSpwanLocation.y},{randomeSpwanLocation.x}) {skipSpwan(randomeSpwanLocation.y,randomeSpwanLocation.x,gameState)}");
+
+
+            command += $"SPAWN 1 {randomeSpwanLocation.y} {randomeSpwanLocation.x};";  
+            gameState.myMatter -= 10;
+
+
+            // new spwan need to move
+            nearByUnoccpied(gameState);
+
+            // gameState.myBots.Add((minYBot.y,minYBot.x,false)); 
+          }
+                      
+        }
+
+      return command;
+    }
+
+    public static string SpwanRandomeONanyofMyBots(State gameState,(int y, int x) canSpawn)
+    {
+      var command = string.Empty;
+
+      
+      if (gameState.myBots.Count() == 0)
+      {
+          //gameState.myBots.Add((canSpawn.y,canSpawn.x,false)); 
+          if (!skipSpwan(canSpawn.y,canSpawn.x,gameState))
+          {
+
+            command += $"SPAWN 1 {canSpawn.y} {canSpawn.x};";
+
+            // new spwan need to move
+            nearByUnoccpied(gameState);
+          }
+      }
+      else 
+      {
+        if ( gameState.width/2 < gameState.myBots.OrderBy(qu => Guid.NewGuid()).First().Location.y &&
+              gameState.myMatter >= 10)
+        {
+            //err("we are at right side");
+            
+            // calcluate min y of a bot with its y,x co                            
+            var minYBot = gameState.myBots.Min(t => t.Location);
+
+          // skip swapn will return true and we make it false, to actually skip the spwan.
+          if (!skipSpwan(minYBot.y,minYBot.x,gameState))
+          {
+            err("spwan");
+            //err($"spwan near enemy ({minYBot.y},{minYBot.x}) {skipSpwan(minYBot.y,minYBot.x,gameState)}");
+            command += $"SPAWN 1 {minYBot.y} {minYBot.x};";  
+            gameState.myMatter -= 10;
+            // new spwan need to move
+            nearByUnoccpied(gameState);
+            // gameState.myBots.Add((minYBot.y,minYBot.x,false));
+          }
+                        
+        }
+        else if(gameState.myMatter >= 10)
+        { 
+            //err("we are at left side");
+            // calcluate max y of a bot with its y,x co
+            var maxYBot = gameState.myBots.Max(t => t.Location);
+
+            if(!skipSpwan(maxYBot.y,maxYBot.x,gameState))
+            {
+              //err($"spwan near enemy  ({maxYBot.y},{maxYBot.x}) {skipSpwan(maxYBot.y,maxYBot.x,gameState)}");
+              //err("spwan");
+              command += $"SPAWN 1 {maxYBot.y} {maxYBot.x};";
+              gameState.myMatter -= 10;
+              // new spwan need to move
+              nearByUnoccpied(gameState);
+              // gameState.myBots.Add((maxYBot.y,maxYBot.x,false));
+            }
+        }
+      }
+      return command;
+    }
+
+    public static bool skipSpwan(int y, int x,State gameState)
+    {      
+      List<bool> allgrass = new(){false};
+      List<(int y,int x)> grid = new();
+
+      (int y, int x) up    = (0,-1);
+      (int y, int x) down  = (0,+1);
+      (int y, int x) back  = (-1,0);
+      (int y, int x) front = (+1,0);
+
+      grid.Add(up);
+      grid.Add(down);
+      grid.Add(back);
+      grid.Add(front);
+
+      for(int h = x; h <= gameState.height; h++) {
+        for(int w = y; w <= gameState.width; w++) {
+          foreach(var direction in grid)
+          {
+              (int y,int x) newdirections = ((w + direction.y), (h + direction.x));
+              //err($"{direction.y}, {direction.x}");           
+
+              if (containsState(gameState,newdirections.y,newdirections.x))
+              {
+                  var data = gameState.state[(newdirections.y,newdirections.x)];
+                  
+                  if (data.scrapAmount == 0 || data.recycler == 1) 
+                  {
+                    allgrass.Add(true);
+                  }
+                  else
+                  {
+                    allgrass.Add(false);
+                  }
+              }
+          }
+
+          if(allgrass.Where(x => x == true).Count() == 4) 
+          {
+            return true;
+          }
+          else
+          {
+          return false;
+          }
+        }
+      }
+
+      return false;
+
+    }
+
+    public static string CanBuild(State gameState)
+    {
+
+      //err($"can build - {gameState.canBuildRecycler.Count()}");
+
+      //  if (iNeedMatter)
+      //  {
+         var command = string.Empty; 
+
+         //var canBuild = gameState.canBuildRecycler.FirstOrDefault();
+         var recycler =gameState.canBuildRecycler.Where(x => x ==  gameState.canBuildRecycler.Max());
+
+           foreach(var canBuild in recycler) 
+          {
+            /*
+            */
+            // is any thing in range
+            // if not pick the largest one.
+            // all the columes in the map are grass 
+            // all the rorws in the map are grass
+            // spwan
+
+           // err($"col grass set build to false:- {!isRowONmapisAllGrass(gameState)}");
+
+            if (
+              anyRecyclerIsNnotInRange(gameState,canBuild.y,canBuild.x) &&
+              //checkAdjacentTilesForRecyclers(canBuild.y,canBuild.x,gameState) &&
+                (gameState.myMatter <= gameState.oppMatter) 
+                && gameState.myMatter >= 10 &&
+               !isRowONmapisAllGrass(gameState)
+                )
+            {
+              command += $"BUILD {canBuild.y} {canBuild.x};";
+              gameState.allRescylesOnMap[(canBuild.y,canBuild.x)] = true;
+              gameState.myMatter -= 10;
+            }
+          
+          }
+          
+           return command;
+       //}
+
+    }
+
+    public static bool isARowmOnMapGrass(State gameState)
+    {
+      for (int y = 0; y < gameState.height; y++)
+      {
+        bool allGrassOnARow = false;
+        for (int x = 0; x < gameState.width;x++)
+        {
+            if (containsState(gameState,y,x))
+            {
+                (int owner,int recycler, int scrapAmount,int inRangeOfRecycler) = gameState.state[(y,x)];
+                if (scrapAmount == 0)
+                {
+                    allGrassOnARow = true;
+                }
+                else 
+                {
+                  allGrassOnARow = false;
+                }
+            }
+        }
+        if (allGrassOnARow) return true;
+      }
+
+      return false;
+    }
+
+    public static bool isAColmOnMapGrass(State gameState)
+    {
+      for (int y = 0; y < gameState.width;y++)
+      {
+        //string data = "";
+        bool allGrassOnACol = false;
+        for (int x = 0; x < gameState.height; x++)
+        {
+          //data += "||";
+            if (gameState.state.ContainsKey((y,x)))
+            {
+                (int owner,int recycler, int scrapAmount,int inRangeOfRecycler) = gameState.state[(y,x)];
+                if (scrapAmount == 0)
+                {
+                  allGrassOnACol = true;
+                }
+                else 
+                {
+                  allGrassOnACol = false;
+                }
+            }
+        }
+        //data += "__";
+        if (allGrassOnACol) return true;
+      }
+
+      return false;
+    }
+
+     public static bool containsState(State gameState,int y, int x)
+    {
+       if (gameState.state.ContainsKey((y,x)))
+      {
+        return true;
+      }
+      else 
+      {
+        return false;
+      }
+    }
+
+
+    public static (bool canMove,int y, int x) isNearMeUnoccpied(int y,int x,State gameState,int noOfTils)
+    {
+        // left side or right side
+        // close to up or down
+        // close to back or front
+        List<(int y,int x)> grid = new();
+
+        (int y, int x) down  = (0,+1);
+        (int y, int x) back  = (-1,0);
+        (int y, int x) front = (+1,0);
+        (int y, int x) up    = (0,-1);
+
+        grid.Add(up);
+        grid.Add(down);
+        grid.Add(back);
+        grid.Add(front);
+
+        for(int h = x; h <= gameState.height; h++) {
+          for(int w = y; w <= gameState.width; w++) {
+            foreach(var direction in grid)
+            {
+              (int y,int x) newdirections = ((w + direction.y), (h + direction.x));
+              //err($"{direction.y}, {direction.x}");
+              var nearme = unoccpiedNearMyBot(gameState,newdirections.y,newdirections.x);
+              if(nearme.canMove) {
+                return nearme;
+              }
+            }
+          }
+        }
+
+        return (false,y, x);;
+    }
+
+
+    public static  bool checkAdjacentTilesForRecyclers(int y,int x,State gameState)
+    {
+        for(int w = -1; w <= 1; ++w) {
+          for(int h = -1; h <= 1; ++h) {
+              if(allRecyclesOnMapCheck(gameState,y+2,x+h)) {
+                return true;
+              }
+          }
+        }
+
+        return false;
+    }
+
+    public static (bool canMove,int y, int x) unoccpiedNearMyBot(State gameState,int y, int x)
+    {
+      if (gameState.state.ContainsKey((y,x)))
+      {
+        var currentFound = (y,x);
+
+        var gameStateOnThisLocation = gameState.state[(y,x)];
+
+        if((gameStateOnThisLocation.owner == 0 || gameStateOnThisLocation.owner == -1) &&
+           gameStateOnThisLocation.recycler == 0 &&
+           gameStateOnThisLocation.scrapAmount >= 1 
+           //!gameState.myBots.Any(x => x.TargetLocation == currentFound) 
+           )
+           {
+              return (true,y, x);
+           }
+
+           return (false,y, x);
+      }
+      else 
+      {
+        return (false,y, x);
+      }
+    }
+
+    public static bool anyRecyclerIsNnotInRange(State gameState,int y, int x)
+    {
+       if (gameState.state.ContainsKey((y,x)))
+      {
+        return gameState.state[(y,x)].inRangeOfRecycler == 0;
+      }
+      else 
+      {
+        return false;
+      }
+    }
+    
+
+    public static bool allRecyclesOnMapCheck(State gameState,int y, int x)
+    {
+      if (gameState.allRescylesOnMap.ContainsKey((y,x)))
+      {
+        return gameState.allRescylesOnMap[(y,x)];
+      }
+      else 
+      {
+        return false;
+      }
+    }
+
+     public bool UnitOnTheCell(int owner, int units) => (owner == 1 && units > 0);
+
+    public static string printMap(int height,int width)
+    {
+      var map = string.Empty;
+      for (int x = 0; x < height; x++)
+      {
+          for (int y = 0; y < width; y++)
+          {
+            map += $"({y},{x}) ";
+          }
+          map += "\n";
+      }
+      return map;
+    }  
+
+    public static string printUnoccupiedmap(State gameState)
+    {
+      var map = string.Empty;
+      for (int x = 0; x < gameState.height; x++)
+      {
+          for (int y = 0; y < gameState.width; y++)
+          {           
+
+            if(gameState.unOccupied.Find(t => t.y == y && t.x == x) == (y,x))
+            {
+               map += $".";
+            } 
+            else if(gameState.allRescylesOnMap[(y,x)])
+            {
+               map += $"r";
+            }  
+            else if(gameState.enemyBot.Find(t => t.y == y && t.x == x) == (y,x))
+            {
+              map += $"e";
+            }
+            else if(gameState.myBots.Any(t => t.Location.y == y && t.Location.x == x))
+            {
+              map += $"m";
+            }
+            else if(gameState.canSpawnBot.Find(t => t.y == y && t.x == x) == (y,x))
+            {
+              map += $",";
+            }
+            else if(gameState.state[(y,x)].scrapAmount == 0)
+            {
+              map += " ";
+            }
+
+          }
+          map += "\n";
+      }
+      return map;
+    }   
+
+   
+}
+
