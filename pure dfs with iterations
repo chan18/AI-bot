@@ -1,0 +1,342 @@
+namespace aibot;
+using System;
+using System.Linq;
+using System.Collections.Generic;
+
+/**
+ * Auto-generated code below aims at helping you parse
+ * the standard input according to the problem statement.
+ **/
+public class State 
+{
+  public List<MyBot> myBots {get; set;} = new();
+  public List<(int y,int x)> enemyBot {get; set;} = new();
+  public Dictionary<(int y,int x),bool> unOccupied {get; set;} = new();
+  public Dictionary<(int y,int x),bool> emptyCells {get; set;} = new();
+  public List<(int y,int x)> canBuildRecycler {get; set;} = new();
+  public List<(int y,int x)> canSpawnBot {get; set;} = new();
+  public Dictionary<(int y,int x),bool> allRescylesOnMap {get; set;} = new();
+  public Dictionary<(int y, int x),bool> visited {get; set;} = new();
+  public Dictionary<(int y,int x),(int owner,int recycler, int scrapAmount,int inRangeOfRecycler)> state {get; set;} = new();
+  public int height {get; set;}
+  public int width {get; set;}
+  public int myMatter {get; set;}
+  public int oppMatter {get; set;}
+  public (int y, int x) nextMove {get; set;} = new();
+}
+
+public class MyBot
+{
+    public (int y, int x) Location {get; set;}
+    public (int y,int x) EnemeyLocation {get; set;}
+    public (int y,int x) TargetLocation {get; set;}
+    public bool occupied {get; set;}
+}
+
+public class Player
+{
+    static Action<string> cw = Console.WriteLine;
+    static Action<string> err = Console.Error.WriteLine;
+
+    static void Main(string[] args)
+    {        
+        string[] inputs;
+        inputs = Console.ReadLine().Split(' ');
+
+        int width = int.Parse(inputs[0]);
+        int height = int.Parse(inputs[1]);
+        const int canDoAction = 1;
+        const int neutralLocation = -1;
+
+        // game loop
+        while (true)
+        {
+            inputs = Console.ReadLine().Split(' ');
+
+            int myMatter = int.Parse(inputs[0]);
+            int oppMatter = int.Parse(inputs[1]);
+
+            string command = string.Empty;
+            var gameState = new State();
+            gameState.height = height;
+            gameState.width = width;
+            gameState.myMatter = myMatter;
+            gameState.oppMatter = oppMatter;
+            string step = string.Empty;
+
+            for (int x = 0; x < height; x++)
+            {
+                for (int y = 0; y < width; y++)
+                {
+                    inputs = Console.ReadLine().Split(' ');
+                    int scrapAmount = int.Parse(inputs[0]);
+                    int owner = int.Parse(inputs[1]);   
+                    int units = int.Parse(inputs[2]);
+                    int recycler = int.Parse(inputs[3]);
+                    int canBuild = int.Parse(inputs[4]);
+                    int canSpawn = int.Parse(inputs[5]); 
+                    int inRangeOfRecycler = int.Parse(inputs[6]);
+
+                    gameState.state[(y,x)] = (owner,recycler, scrapAmount, inRangeOfRecycler);
+
+                    gameState.visited[(y,x)] = false;
+
+
+                  // build recyler
+                  if (canBuildRecylcerInHere(canBuild) &&
+                      hasNoRecyler(recycler) &&
+                      hasNoUnits(units) &&
+                      (owner == 1))
+                  {
+                    gameState.canBuildRecycler.Add((y,x));
+                  }
+
+                  // add all the location of recycles
+                  if (recycler == 1 && scrapAmount > 1)
+                  {
+                    gameState.allRescylesOnMap.Add((y,x),true);
+                  }
+                  else 
+                  {
+                    gameState.allRescylesOnMap.Add((y,x),false);
+                  }
+
+                  // can spwan the bot
+                  if (canSpwan(canSpawn) &&
+                      iAmTheOwner(owner) &&
+                      IsNotGrassTile(scrapAmount) && 
+                      hasNoRecyler(recycler))
+                  {
+                    gameState.canSpawnBot.Add((y,x));
+                  }
+
+                  // add my bots
+                   if (owner == 1)
+                   {
+                      if (units > 1)
+                      {
+                        for (var i = 0;i < units;i++)
+                        {
+                          gameState.myBots.Add(new(){
+                            EnemeyLocation = (-1,-1),
+                            occupied = false,
+                            Location = (y,x),
+                          });
+                        }
+                      }
+                      else if (units == 1)
+                      {
+                        gameState.myBots.Add(new(){
+                            EnemeyLocation = (-1,-1),
+                            occupied = false,
+                            Location = (y,x),
+                          });
+                      }
+                   }
+
+                  if (
+                     (hasNoOwner(owner) || iAmNotTheOwner(owner)) &&
+                       hasNoUnits(units)  &&
+                       IsNotGrassTile(scrapAmount) && 
+                       hasNoRecyler(recycler)
+                       //true
+                      )
+                  {
+                    gameState.unOccupied[(y,x)] = true;
+                  }
+
+                  if (
+                     (hasNoOwner(owner)) &&
+                       //hasNoUnits(units)  &&
+                       IsNotGrassTile(scrapAmount)
+                       //hasNoRecyler(recycler)
+                       //true
+                      )
+                  {
+                    gameState.emptyCells[(y,x)] = true;
+                  }
+
+                  // add enemy bots
+                  if (owner == 0)
+                  {
+                    if (units > 1)
+                      {
+                        for (var i = 0;i < units;i++)
+                        {
+                          gameState.enemyBot.Add((y,x));
+                        }
+                      }
+                      else if (units == 1)
+                      {
+                        gameState.enemyBot.Add((y,x));
+                      }
+                  }
+
+                }
+            }
+    
+            step = $"{GamePlay(gameState)}";
+            if (step.Length > 0)
+            {
+              cw(step);
+            }
+            else 
+            {
+              cw("WAIT");
+            }
+        }
+
+        bool IsNotGrassTile(int scrapAmount) => scrapAmount > 0;
+        bool hasNoRecyler(int recycler) => recycler == 0;
+        bool hasNoUnits(int units) => units == 0;
+        bool hasNoOwner(int owner) => owner == neutralLocation;
+        bool iAmTheOwner(int owner) => owner == 1;
+        bool iAmNotTheOwner(int owner) => owner == 0;
+        bool enoughMatter(int matter) => matter >= 10;
+        bool canSpwan(int canSpawn) => canSpawn == canDoAction;
+        bool canBuildRecylcerInHere(int canBuild) => canBuild == canDoAction;
+    }
+
+    public static string GamePlay(State gameState)
+    {
+        string command = "";
+
+      //command += killEnemy(gameState);
+
+      command += occupyDfs(gameState);
+
+      //command += Spwan(gameState);
+      //command += build(gameState);
+
+      return command;
+    }
+
+    public static string occupyDfs(State gameState)
+    {
+      var command = string.Empty;
+      int myBotsCount =  gameState.myBots.Count();
+
+      if (myBotsCount > 0)
+      {
+        for (int i = 0;i < myBotsCount ;i++)
+        {
+          var unoccupiedBotLocation = gameState.myBots[i];
+
+          var isNearMe = DFS(
+                                unoccupiedBotLocation.Location.y,
+                                unoccupiedBotLocation.Location.x,
+                                gameState);
+
+            // err($"({unoccupiedBotLocation.Location.y},{unoccupiedBotLocation.Location.x}) => "
+            //     + $"({isNearMe.y},{isNearMe.x}) -> {isNearMe.canMove} "
+            //    // + $"otherbot target:{!gameState.myBots.Any(x => x.TargetLocation == (isNearMe.y,isNearMe.x))}"
+            //    );
+
+            if (isNearMe.canMove
+                 //&& !gameState.myBots.Any(x => x.TargetLocation == (isNearMe.y,isNearMe.x))
+                )
+            {
+                command += $"MOVE 1 {unoccupiedBotLocation.Location.y} {unoccupiedBotLocation.Location.x} ";
+                command += $"{isNearMe.y} {isNearMe.x}";
+
+                // mark everything unvisisted
+                //MarkVisisted(gameState);
+
+                unoccupiedBotLocation.TargetLocation = (isNearMe.y,isNearMe.x);
+               // unoccupiedBotLocation.occupied = true;
+
+                if (i < gameState.myBots.Count()-1)
+                {
+                   command += ";";
+                }
+                else if (gameState.canSpawnBot.Any())
+                {
+                   command += ";";
+                }
+            }
+        }
+      }
+
+      return command;
+    }
+
+    public static (int y, int x, bool canMove) DFS(int sy, int sx,State gameState)
+    {
+        Stack<(int y,int x)> frontier = new();
+        Stack<(int y,int x)> explorer = new();	
+
+        frontier.Push((sy,sx));
+        explorer.Push((sy,sx));
+        string debug = "";
+        int counter = 1;
+       
+        while(frontier.Any())
+        {
+            var currentTail = frontier.Pop();
+
+            while(counter <= gameState.width)
+            {
+                int absCounter = counter * -1;
+                // int absCounter = -1;
+                // counter = 1;
+                for(int dx = absCounter; dx <= counter; ++dx)
+                {
+                  for (int dy = absCounter; dy <= counter; ++dy)
+                  {
+                      (int y,int x) newdirections = ((currentTail.y + dy), (currentTail.x + dx));
+
+                      // Skip the current node (i and j will both be 0)
+                      if (newdirections.x == 0 && newdirections.y == 0)
+                      {
+                          continue;
+                      }
+
+                      if (   newdirections.x < 0 
+                          || newdirections.x >= gameState.height
+                          || newdirections.y < 0 
+                          || newdirections.y >= gameState.width 
+                        ) {
+                        continue;
+                      }
+
+                      if(    gameState.state[newdirections].scrapAmount == 0
+                          || gameState.myBots.Any(x => x.TargetLocation == newdirections)
+                          || !gameState.unOccupied.ContainsKey(newdirections) // directon which does not contian.
+                        ) {
+                          continue;
+                        }
+
+                      // if ((12,5) == newdirections)
+                      // {
+                      //     return (newdirections.y, newdirections.x,true);
+                      // }
+
+                        // all the un-occupied nodes are end nodes which we need to move.
+                      if (gameState.unOccupied.ContainsKey(newdirections))
+                      {
+                          return (newdirections.y, newdirections.x,true);
+                      }                    
+
+                      // if we already explored
+                      if (explorer.Contains(newdirections))
+                      {
+                        continue;
+                      }
+                    
+                      err($"({sy},{sx}) -> "
+                        + $"({newdirections.y},{newdirections.x})"
+                      );
+
+                      frontier.Push(currentTail);
+                      explorer.Push(currentTail);
+                  }     
+                }
+
+               counter++;
+            }
+        }
+
+        
+        return (sy, sx,false);
+    }  
+}
