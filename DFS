@@ -7,30 +7,30 @@ using System.Collections.Generic;
  * Auto-generated code below aims at helping you parse
  * the standard input according to the problem statement.
  **/
-public class State 
+public class State
 {
-  public List<MyBot> myBots {get; set;} = new();
-  public List<(int y,int x)> enemyBot {get; set;} = new();
-  public Dictionary<(int y,int x),bool> unOccupied {get; set;} = new();
-  public Dictionary<(int y,int x),bool> emptyCells {get; set;} = new();
-  public List<(int y,int x)> canBuildRecycler {get; set;} = new();
-  public List<(int y,int x)> canSpawnBot {get; set;} = new();
-  public Dictionary<(int y,int x),bool> allRescylesOnMap {get; set;} = new();
-  public Dictionary<(int y, int x),bool> visited {get; set;} = new();
-  public Dictionary<(int y,int x),(int owner,int recycler, int scrapAmount,int inRangeOfRecycler)> state {get; set;} = new();
-  public int height {get; set;}
-  public int width {get; set;}
-  public int myMatter {get; set;}
-  public int oppMatter {get; set;}
-  public (int y, int x) nextMove {get; set;} = new();
+    public List<MyBot> myBots { get; set; } = new();
+    public List<(int y, int x)> enemyBot { get; set; } = new();
+    public Dictionary<(int y, int x), bool> unOccupied { get; set; } = new();
+    public Dictionary<(int y, int x), bool> emptyCells { get; set; } = new();
+    public List<(int y, int x)> canBuildRecycler { get; set; } = new();
+    public List<(int y, int x)> canSpawnBot { get; set; } = new();
+    public Dictionary<(int y, int x), bool> allRescylesOnMap { get; set; } = new();
+    public Dictionary<(int y, int x), bool> visited { get; set; } = new();
+    public Dictionary<(int y, int x), (int owner, int recycler, int scrapAmount, int inRangeOfRecycler)> state { get; set; } = new();
+    public int height { get; set; }
+    public int width { get; set; }
+    public int myMatter { get; set; }
+    public int oppMatter { get; set; }
+    public (int y, int x) nextMove { get; set; } = new();
 }
 
 public class MyBot
 {
-    public (int y, int x) Location {get; set;}
-    public (int y,int x) EnemeyLocation {get; set;}
-    public (int y,int x) TargetLocation {get; set;}
-    public bool occupied {get; set;}
+    public (int y, int x) Location { get; set; }
+    public (int y, int x) EnemeyLocation { get; set; }
+    public (int y, int x) TargetLocation { get; set; }
+    public bool occupied { get; set; }
 }
 
 public class Player
@@ -39,7 +39,7 @@ public class Player
     static Action<string> err = Console.Error.WriteLine;
 
     static void Main(string[] args)
-    {        
+    {
         string[] inputs;
         inputs = Console.ReadLine().Split(' ');
 
@@ -70,119 +70,121 @@ public class Player
                 {
                     inputs = Console.ReadLine().Split(' ');
                     int scrapAmount = int.Parse(inputs[0]);
-                    int owner = int.Parse(inputs[1]);   
+                    int owner = int.Parse(inputs[1]);
                     int units = int.Parse(inputs[2]);
                     int recycler = int.Parse(inputs[3]);
                     int canBuild = int.Parse(inputs[4]);
-                    int canSpawn = int.Parse(inputs[5]); 
+                    int canSpawn = int.Parse(inputs[5]);
                     int inRangeOfRecycler = int.Parse(inputs[6]);
 
-                    gameState.state[(y,x)] = (owner,recycler, scrapAmount, inRangeOfRecycler);
+                    gameState.state[(y, x)] = (owner, recycler, scrapAmount, inRangeOfRecycler);
 
-                    gameState.visited[(y,x)] = false;
+                    gameState.visited[(y, x)] = false;
 
 
-                  // build recyler
-                  if (canBuildRecylcerInHere(canBuild) &&
-                      hasNoRecyler(recycler) &&
-                      hasNoUnits(units) &&
-                      (owner == 1))
-                  {
-                    gameState.canBuildRecycler.Add((y,x));
-                  }
+                    // build recyler
+                    if (canBuildRecylcerInHere(canBuild) &&
+                        hasNoRecyler(recycler) &&
+                        hasNoUnits(units) &&
+                        (owner == 1))
+                    {
+                        gameState.canBuildRecycler.Add((y, x));
+                    }
 
-                  // add all the location of recycles
-                  if (recycler == 1 && scrapAmount > 1)
-                  {
-                    gameState.allRescylesOnMap.Add((y,x),true);
-                  }
-                  else 
-                  {
-                    gameState.allRescylesOnMap.Add((y,x),false);
-                  }
+                    // add all the location of recycles
+                    if (recycler == 1 && scrapAmount > 1)
+                    {
+                        gameState.allRescylesOnMap.Add((y, x), true);
+                    }
+                    else
+                    {
+                        gameState.allRescylesOnMap.Add((y, x), false);
+                    }
 
-                  // can spwan the bot
-                  if (canSpwan(canSpawn) &&
-                      iAmTheOwner(owner) &&
-                      IsNotGrassTile(scrapAmount) && 
-                      hasNoRecyler(recycler))
-                  {
-                    gameState.canSpawnBot.Add((y,x));
-                  }
+                    // can spwan the bot
+                    if (canSpwan(canSpawn) &&
+                        iAmTheOwner(owner) &&
+                        IsNotGrassTile(scrapAmount) &&
+                        hasNoRecyler(recycler))
+                    {
+                        gameState.canSpawnBot.Add((y, x));
+                    }
 
-                  // add my bots
-                   if (owner == 1)
-                   {
-                      if (units > 1)
-                      {
-                        for (var i = 0;i < units;i++)
+                    // add my bots
+                    if (owner == 1)
+                    {
+                        if (units > 1)
                         {
-                          gameState.myBots.Add(new(){
-                            EnemeyLocation = (-1,-1),
-                            occupied = false,
-                            Location = (y,x),
-                          });
+                            for (var i = 0; i < units; i++)
+                            {
+                                gameState.myBots.Add(new()
+                                {
+                                    EnemeyLocation = (-1, -1),
+                                    occupied = false,
+                                    Location = (y, x),
+                                });
+                            }
                         }
-                      }
-                      else if (units == 1)
-                      {
-                        gameState.myBots.Add(new(){
-                            EnemeyLocation = (-1,-1),
-                            occupied = false,
-                            Location = (y,x),
-                          });
-                      }
-                   }
-
-                  if (
-                     (hasNoOwner(owner) || iAmNotTheOwner(owner)) &&
-                       hasNoUnits(units)  &&
-                       IsNotGrassTile(scrapAmount) && 
-                       hasNoRecyler(recycler)
-                       //true
-                      )
-                  {
-                    gameState.unOccupied[(y,x)] = true;
-                  }
-
-                  if (
-                     (hasNoOwner(owner)) &&
-                       //hasNoUnits(units)  &&
-                       IsNotGrassTile(scrapAmount)
-                       //hasNoRecyler(recycler)
-                       //true
-                      )
-                  {
-                    gameState.emptyCells[(y,x)] = true;
-                  }
-
-                  // add enemy bots
-                  if (owner == 0)
-                  {
-                    if (units > 1)
-                      {
-                        for (var i = 0;i < units;i++)
+                        else if (units == 1)
                         {
-                          gameState.enemyBot.Add((y,x));
+                            gameState.myBots.Add(new()
+                            {
+                                EnemeyLocation = (-1, -1),
+                                occupied = false,
+                                Location = (y, x),
+                            });
                         }
-                      }
-                      else if (units == 1)
-                      {
-                        gameState.enemyBot.Add((y,x));
-                      }
-                  }
+                    }
+
+                    if (
+                       (hasNoOwner(owner) || iAmNotTheOwner(owner)) &&
+                         hasNoUnits(units) &&
+                         IsNotGrassTile(scrapAmount) &&
+                         hasNoRecyler(recycler)
+                        //true
+                        )
+                    {
+                        gameState.unOccupied[(y, x)] = true;
+                    }
+
+                    if (
+                       (hasNoOwner(owner)) &&
+                         //hasNoUnits(units)  &&
+                         IsNotGrassTile(scrapAmount)
+                        //hasNoRecyler(recycler)
+                        //true
+                        )
+                    {
+                        gameState.emptyCells[(y, x)] = true;
+                    }
+
+                    // add enemy bots
+                    if (owner == 0)
+                    {
+                        if (units > 1)
+                        {
+                            for (var i = 0; i < units; i++)
+                            {
+                                gameState.enemyBot.Add((y, x));
+                            }
+                        }
+                        else if (units == 1)
+                        {
+                            gameState.enemyBot.Add((y, x));
+                        }
+                    }
 
                 }
             }
-    
+
             step = $"{GamePlay(gameState)}";
             if (step.Length > 0)
             {
-              cw(step);
+                cw(step);
             }
-            else 
+            else
             {
-              cw("WAIT");
+                cw("WAIT");
             }
         }
 
@@ -201,535 +203,225 @@ public class Player
     {
         string command = "";
 
-      //command += killEnemy(gameState);
+        //command += killEnemy(gameState);
 
-      command += occupyDfs(gameState);
+        command += OccupyDFS(gameState);
 
-      command += Spwan(gameState);
-      command += build(gameState);
-
-      return command;
-    }
-
-    public static string killEnemy(State gameState)
-    {
-      var command = string.Empty;
-      int myBotsCount =  gameState.myBots.Count();
-
-      if (myBotsCount > 0)
-      {
-        for (int i = 0;i < myBotsCount ;i++)
-        {
-          var myBots = gameState.myBots[i];
-
-          var isNearMe = killDfs(
-                                myBots.Location.y,
-                                myBots.Location.x,
-                                gameState);
-
-            //err($"({isNearMe.y},{isNearMe.x}){isNearMe.canMove} "+ 
-              //  $"otherbot target:{!gameState.myBots.Any(x => x.TargetLocation == (isNearMe.y,isNearMe.x))}");
-
-            if (isNearMe.canMove &&
-                !gameState.myBots.Any(x => x.TargetLocation == (isNearMe.y,isNearMe.x))
-                )
-            {
-                command += $"MOVE 1 {myBots.Location.y} {myBots.Location.x} ";
-                command += $"{isNearMe.y} {isNearMe.x}";
-
-                // mark everything unvisisted
-                //MarkVisisted(gameState);
-
-                myBots.TargetLocation = (isNearMe.y,isNearMe.x);
-               // unoccupiedBotLocation.occupied = true;
-
-                if (i < gameState.myBots.Count()-1)
-                {
-                   command += ";";
-                }
-                else if (gameState.canSpawnBot.Any())
-                {
-                   command += ";";
-                }
-            }
-        }
-      }
-
-      return command;
-    }
-
-    public static string build(State gameState)
-    {
-      var command = string.Empty;
-      for (int i = 0; i < gameState.canBuildRecycler.Count(); i++)
-      {
-          var location = gameState.canBuildRecycler[i];
-          var found = isNearMeUnoccpied(location.y,location.x,gameState);
-          if(found.canbuild)
-          {
-            command += command += $"BUILD {found.y} {found.x};";
-            return command;
-          }
-      }
-
-      return string.Empty;
-    }
-
-
-   // if we can dfs into a enemeny location only than we can kill it, dfs
-   // will help me detect a valid path that we can move. in cae of map is broken into multiple places.
-    public static (int y,int x,bool canMove) killDfs(int sy, int sx, State gameState)
-    {
-        Stack<(int y,int x)> frontier = new();
-        Stack<(int y,int x)> explorer = new();	
-      //int sy = 
-
-        frontier.Push((sy,sx));
-        explorer.Push((sy,sx));
-
-        while(frontier.Any())
-        {
-          
-          (int y,int x) currentTail = frontier.Pop();	
-        
-          //currentTail.Dump();
-          //err($"from ({sy},{sx}) to  ({currentTail.y},{currentTail.x})");
-
-          // all the un-occupied nodes are end nodes which we need to move.
-          if (gameState.enemyBot.Contains(currentTail))
-          {
-              gameState.nextMove = (currentTail.y, currentTail.x);
-              return (currentTail.y, currentTail.x,true);
-          }
-        
-          currentTail = enemyRange(currentTail.y, currentTail.x,gameState);
-
-          // no neighbour found
-          if (currentTail == (-1,-1))
-          {
-            continue;
-          }
-        
-          // if we already explored
-          if (explorer.Contains(currentTail))
-          {
-            continue;
-          }
-
-          //err($"unvisited node:- ({currentTail.y},{currentTail.x})");
-        
-          // currentTail.Dump();
-        
-          frontier.Push(currentTail);
-          explorer.Push(currentTail);
-        }
-        
-        return (sy, sx,false);
-    }
-
-
-    public static string occupyDfs(State gameState)
-    {
-      var command = string.Empty;
-      int myBotsCount =  gameState.myBots.Count();
-
-      if (myBotsCount > 0)
-      {
-        for (int i = 0;i < myBotsCount ;i++)
-        {
-          var unoccupiedBotLocation = gameState.myBots[i];
-
-          var isNearMe = DFS(
-                                unoccupiedBotLocation.Location.y,
-                                unoccupiedBotLocation.Location.x,
-                                gameState);
-
-            //err($"({isNearMe.y},{isNearMe.x}){isNearMe.canMove} "+ 
-              //  $"otherbot target:{!gameState.myBots.Any(x => x.TargetLocation == (isNearMe.y,isNearMe.x))}");
-
-            if (isNearMe.canMove &&
-                !gameState.myBots.Any(x => x.TargetLocation == (isNearMe.y,isNearMe.x))
-                )
-            {
-                command += $"MOVE 1 {unoccupiedBotLocation.Location.y} {unoccupiedBotLocation.Location.x} ";
-                command += $"{isNearMe.y} {isNearMe.x}";
-
-                // mark everything unvisisted
-                //MarkVisisted(gameState);
-
-                unoccupiedBotLocation.TargetLocation = (isNearMe.y,isNearMe.x);
-               // unoccupiedBotLocation.occupied = true;
-
-                if (i < gameState.myBots.Count()-1)
-                {
-                   command += ";";
-                }
-                else if (gameState.canSpawnBot.Any())
-                {
-                   command += ";";
-                }
-            }
-        }
-      }
-
-      return command;
-    }
-
-    public static (int y, int x, bool canMove) DFS(int sy, int sx,State gameState)
-    {
-        Stack<(int y,int x)> frontier = new();
-        Stack<(int y,int x)> explorer = new();	
-      //int sy = 
-
-        frontier.Push((sy,sx));
-        explorer.Push((sy,sx));
-
-        while(frontier.Any())
-        {
-          
-          (int y,int x) currentTail = frontier.Pop();	
-        
-          //currentTail.Dump();
-          //err($"from ({sy},{sx}) to  ({currentTail.y},{currentTail.x})");
-
-          // all the un-occupied nodes are end nodes which we need to move.
-          if (gameState.unOccupied.ContainsKey(currentTail))
-          {
-              gameState.nextMove = (currentTail.y, currentTail.x);
-              return (currentTail.y, currentTail.x,true);
-          }
-        
-          currentTail = FindUnvisitedNodeFullMapRange(currentTail.y, currentTail.x,gameState);
-
-          // no neighbour found
-          if (currentTail == (-1,-1))
-          {
-            continue;
-          }
-        
-          // if we already explored
-          if (explorer.Contains(currentTail))
-          {
-            continue;
-          }
-
-          //err($"unvisited node:- ({currentTail.y},{currentTail.x})");
-        
-          // currentTail.Dump();
-        
-          frontier.Push(currentTail);
-          explorer.Push(currentTail);
-        }
-        
-        return (sy, sx,false);
-    }    
-
-    // todo: fix if we can spwan? why dfs is not telling us that we don't have to spwan when it is not connected.
-    // note: to find if the current spwan is connect to, 
-    // we need to dfs from current spwan to end of the map,
-    //  if we can reach end of the map we are connected.
-    public static int DFSSpwan(int sy, int sx,State gameState)
-    {
-        Stack<(int y,int x)> frontier = new();
-        Stack<(int y,int x)> explorer = new();
-
-        frontier.Push((sy,sx));
-        explorer.Push((sy,sx));
-
-        int foundCounter = 0;
-
-        while(frontier.Any())
-        {
-          (int y,int x) currentTail = frontier.Pop();
-
-          if (
-            gameState.unOccupied.ContainsKey(currentTail) 
-              //  && 
-              // gameState.enemyBot.Any(x => x == currentTail)
-          )
-          {
-              foundCounter++;
-          }
-
-          // from swapn locaton how far we are? 
-          // if(gameState.enemyBot.Any(x => x == currentTail))
-          // {
-          //   return explorer.Count();
-          // }        
-        
-          currentTail = FindUnvisitedNodeFullMapRangeSpwan(currentTail.y, currentTail.x,gameState);
-
-          if (currentTail == (-1,-1))
-          {
-            continue;
-          }
-        
-          if (explorer.Contains(currentTail))
-          {
-            continue;
-          }
-        
-          frontier.Push(currentTail);
-          explorer.Push(currentTail);
-        }
-        
-        return foundCounter;
-    }
-
-    // You can define other methods, fields, classes and namespaces here  
-    public static string Spwan(State gameState)
-    {
-
-      /*
-           1. spwan near enemy?
-              1. if i have majority tails covered than than swapn near my enemy.
-                  1. nomral range -1 to 1. only where bots can move in adj sides./
-           2. spwan near unoccpied locations?
-             * spwan near unoccpied when i have less tiles covered compare to my enemey.
-                *. find a occpied zone where enemey is far and unoccpied tails are more. 
-                  * find a occpied zone which needs to be occpied.                  
-      */
-        // (y,x) a swpan zone. 
-        // is this y,x fits the discription above.
-
-        var myOccupation = gameState.state.Count(x => x.Value.owner == 1);
-        var enemyOccupiation = gameState.state.Count(x => x.Value.owner == 0);
-        Dictionary<(int y, int x),int> spwanScore = new();
-        string command = "";
-
-        //  if(myOccupation <= enemyOccupiation)
-        //  {
-            for (int i = 0; i < gameState.canSpawnBot.Count(); i++)
-            {
-              var spwanLocation = gameState.canSpawnBot[i];                
-              // we will spwan to occpy
-              // dfs and find the a spwan location where the enemy is far?
-              var lengthOFPath = DFSSpwan(spwanLocation.y,spwanLocation.x,gameState);
-              //err($"spawn score {lengthOFPath}: ({spwanLocation.y},{spwanLocation.x})");
-              spwanScore.Add((spwanLocation.y,spwanLocation.x),lengthOFPath);                  
-            }
-        //  } 
-        //  else {
-        //        // we have more occupied locations
-        //        // we will spwan to kill
-        //  }
-
-        var max = spwanScore.MaxBy(x => x.Value);
-        //err($" Max spawn {max.Value}: ({max.Key.y},{max.Key.x})");
-        command += $"SPAWN {gameState.myMatter/10} {max.Key.y} {max.Key.x};";
-
-        // there is no swapn location that is far from the emptycell.
-        if(max.Value == 0)
-        {
-
-        }
+        //command += Spwan(gameState);
+        //command += build(gameState);
 
         return command;
     }
 
-    // full range serach on map
-    // skipes if any other bot moving to the same location.
-    // skipes if it is not in uoccpied location.
-    public static (int y,int x) FindUnvisitedNodeFullMapRange(int y, int x,State gameState)
+    public static string OccupyDFS(State gameState)
     {
-        int counter = 1;
-        while(counter <= gameState.width)
+        var command = string.Empty;
+        int myBotsCount = gameState.myBots.Count();
+        if (myBotsCount > 0)
         {
-           int absCounter = counter * -1;
-           for(int dx = absCounter; dx < counter; ++dx)
-           {
-              for (int dy = absCounter; dy < counter; ++dy)
-              {
-                // Skip the current node (i and j will both be 0)
-                  if (x == 0 && y == 0)
-                  {
-                      continue;
-                  }
-                  // Calculate the coordinates of the neighbor
-                  int x2 = x + dx;
-                  int y2 = y + dy;
-                  
-                  // skip dignoles
-                  // if ( (y2 < y || y2 > y) && x2 != x)
-                  // {
-                  //   continue;
-                  // }
-                  // if ( (x2 < x || x2 > x) && y2 != x)
-                  // {
-                  //   continue;
-                  // }
-
-                  //err($"({y},{x}) => ({y2},{x2})");
-
-                if (   x2 < 0 
-                    || x2 >= gameState.height
-                    || y2 < 0 
-                    || y2 >= gameState.width 
-                    || gameState.state[(y2, x2)].scrapAmount == 0 
-                    //|| gameState.visited[(y2,x2)]
-                    || !gameState.unOccupied.ContainsKey((y2,x2)) // not in the unoccupied locations.
-                    || gameState.myBots.Any(x => x.TargetLocation == (y2,x2))
-                  )
-                  {
-                      continue;
-                  }
-
-                  return (y2, x2);
-              }
-           }
-
-           counter++;
-        }
-
-        return (-1,-1);
-    }
-
-    // will only skip the grass cells.
-    public static (int y,int x) FindUnvisitedNodeFullMapRangeSpwan(int y, int x,State gameState)
-    {
-        int counter = 1;
-        while(counter <= gameState.width)
-        {
-           int absCounter = counter * -1;
-           for(int dx = absCounter; dx < counter; ++dx)
-           {
-              for (int dy = absCounter; dy < counter; ++dy)
-              {
-                // Skip the current node (i and j will both be 0)
-                  if (x == 0 && y == 0)
-                  {
-                      continue;
-                  }
-                  // Calculate the coordinates of the neighbor
-                  int x2 = x + dx;
-                  int y2 = y + dy;
-
-                 // skip diagonals
-                  // if ( (y2 < y || y2 > y) && x2 != x)
-                  // {
-                  //   continue;
-                  // }
-
-                  // if ( (x2 < x || x2 > x) && y2 != x)
-                  // {
-                  //   continue;
-                  // }
-                  
-                  //err($"({y},{x}) => ({y2},{x2})");
-
-                if (   x2 < 0 
-                    || x2 >= gameState.height
-                    || y2 < 0 
-                    || y2 >= gameState.width 
-                    || gameState.state[(y2, x2)].scrapAmount == 0
-                    // || gameState.state[(y2, x2)].scrapAmount == 0
-                    // || gameState.state[(y2, x2)].scrapAmount == 0
-                    //|| gameState.visited[(y2,x2)]
-                    // || !gameState.unOccupied.ContainsKey((y2,x2))
-                    // || gameState.myBots.Any(x => x.TargetLocation == (y2,x2))
-                  )
-                  {
-                      continue;
-                  }
-
-                  return (y2, x2);
-              }
-           }
-
-           counter++;
-        }
-
-        return (-1,-1);
-    }
-
-    // skip if we did not found a enemy.
-    public static (int y,int x) enemyRange(int y, int x,State gameState)
-    {
-        int counter = 1;
-        while(counter <= gameState.width)
-        {
-           int absCounter = counter * -1;
-           for(int dx = absCounter; dx < counter; ++dx)
-           {
-              for (int dy = absCounter; dy < counter; ++dy)
-              {
-                // Skip the current node (i and j will both be 0)
-                  if (x == 0 && y == 0)
-                  {
-                      continue;
-                  }
-                  // Calculate the coordinates of the neighbor
-                  int x2 = x + dx;
-                  int y2 = y + dy;
-
-                 // skip diagonals
-                  // if ( (y2 < y || y2 > y) && x2 != x)
-                  // {
-                  //   continue;
-                  // }
-
-                  // if ( (x2 < x || x2 > x) && y2 != x)
-                  // {
-                  //   continue;
-                  // }
-                  
-
-                if (   x2 < 0 
-                    || x2 >= gameState.height
-                    || y2 < 0 
-                    || y2 >= gameState.width 
-                    || gameState.state[(y2, x2)].scrapAmount == 0
-                    || !gameState.enemyBot.Contains((y2,x2))
-                    || gameState.myBots.Any(x => x.TargetLocation == (y2,x2))
-                    // || gameState.state[(y2, x2)].scrapAmount == 0
-                    // || gameState.state[(y2, x2)].scrapAmount == 0
-                    //|| gameState.visited[(y2,x2)]
-                    // || !gameState.unOccupied.ContainsKey((y2,x2))
-                    // || gameState.myBots.Any(x => x.TargetLocation == (y2,x2))
-                  )
-                  {
-                      continue;
-                  }
-
-                  //err($"({y},{x}) => ({y2},{x2})");
-                  return (y2, x2);
-              }
-           }
-
-           counter++;
-        }
-
-        return (-1,-1);
-    }
-
-    public static (bool canbuild,int y, int x) isNearMeUnoccpied(int y,int x,State gameState)
-    {
-        // left side or right side
-        // close to up or down
-        // close to back or front
-        List<(int y,int x)> grid = new();
-
-        (int y, int x) down  = (0,+1);
-        (int y, int x) back  = (-1,0);
-        (int y, int x) front = (+1,0);
-        (int y, int x) up    = (0,-1);
-
-        grid.Add(front);
-        grid.Add(down);
-        grid.Add(up);
-        grid.Add(back);
-
-        foreach(var direction in grid)
-        {
-          (int y,int x) newdirections = ((y + direction.y), (x + direction.x));
-           // err($"{direction.y}, {direction.x}");
-            if (gameState.enemyBot.Any(x => x == newdirections))
+            for (int i = 0; i < myBotsCount; i++)
             {
-              var found = gameState.enemyBot.Find(x => x == newdirections);
-              return (true, y,x);
+                var unoccupiedBotLocation = gameState.myBots[i];
+
+                var isNearMe = FindUnoccpiedOnMap(
+                                      unoccupiedBotLocation.Location.y,
+                                      unoccupiedBotLocation.Location.x,
+                                      gameState);
+
+                // check if we can reach?
+
+                // err($"({unoccupiedBotLocation.Location.y},{unoccupiedBotLocation.Location.x}) => "
+                //     + $"({isNearMe.y},{isNearMe.x}) -> {isNearMe.canMove} "
+                //    // + $"otherbot target:{!gameState.myBots.Any(x => x.TargetLocation == (isNearMe.y,isNearMe.x))}"
+                //    );
+
+                if (isNearMe.CanMove)
+                {
+                    command += $"MOVE 1 {unoccupiedBotLocation.Location.y} {unoccupiedBotLocation.Location.x} ";
+                    command += $"{isNearMe.y} {isNearMe.x}";
+
+                    // mark everything unvisisted
+                    //MarkVisisted(gameState);
+
+                    unoccupiedBotLocation.TargetLocation = (isNearMe.y, isNearMe.x);
+                    // unoccupiedBotLocation.occupied = true;
+
+                    if (i < gameState.myBots.Count() - 1)
+                    {
+                        command += ";";
+                    }
+                    else if (gameState.canSpawnBot.Any())
+                    {
+                        command += ";";
+                    }
+                }
             }
         }
+        return command;
+    }
 
-        return (false,y, x);;
+    /*
+        How it works:
+        from given location (y,x) it will iterate to all the map cells and finds a
+        unoccpied locatoin and returns that back.
+    */
+    public static (int y, int x, bool CanMove) FindUnoccpiedOnMap(int sy, int sx, State gameState)
+    {
+        int counter = 1;
+        // worst case it will iterate all the map.
+        while (counter <= gameState.width)
+        {
+            int absCounter = counter * -1;
+            for (int dx = absCounter; dx <= counter; ++dx)
+            {
+                for (int dy = absCounter; dy <= counter; ++dy)
+                {
+                    (int y, int x) newdirections = ((sy + dy), (sx + dx));
+
+                    // Skip the current node (i and j will both be 0)
+                    if (newdirections.x == 0 && newdirections.y == 0)
+                    {
+                        continue;
+                    }
+
+                    if (newdirections.x < 0
+                        || newdirections.x >= gameState.height
+                        || newdirections.y < 0
+                        || newdirections.y >= gameState.width
+                      )
+                    {
+                        continue;
+                    }
+
+                    // found cell is reachable? and is not grass. & no bot is trying to reach that location.
+                    if (gameState.state[newdirections].scrapAmount == 0
+                        || gameState.myBots.Any(x => x.TargetLocation == newdirections)
+                        || !gameState.unOccupied.ContainsKey(newdirections) // directon which does not contian.
+                      )
+                    {
+                        continue;
+                    }
+
+                    //  err($"({sy},{sx}) -> "
+                    //   + $"({newdirections.y},{newdirections.x})"
+                    // );
+
+                    // all the un-occupied nodes are end nodes which we need to move.
+                    // source and destination
+                    var source = (sy,sx);
+                    var destination = newdirections;
+                    if (gameState.unOccupied.ContainsKey(newdirections) 
+                    &&  IsReachableDFSPathFinding(source,destination,gameState))
+                    {
+                        return (newdirections.y, newdirections.x, true);
+                    }
+                }
+            }
+            counter++;
+        }
+
+        return (sy, sx, false);
+    }
+
+    /*
+      can we reach a path from given source (y,x)
+    */
+    public static bool IsReachableDFSPathFinding(
+                        (int y, int x) source,
+                        (int y, int x) destination, 
+                        State gameState)
+    {
+      //  err($"({source.y},{source.x}) -> "
+      //                   + $"({destination.y},{destination.x})"
+      //               );
+
+        Stack<(int y, int x)> frontier = new();
+        Stack<(int y, int x)> explorer = new();
+
+        frontier.Push(source);
+        explorer.Push(source);
+
+        while (frontier.Any())
+        {
+            var currentTail = frontier.Pop();
+
+            for (int dx = -1; dx <= 1; ++dx)
+            {
+                for (int dy = -1; dy <= 1; ++dy)
+                {
+                    (int y, int x) newdirections = ((currentTail.y + dy), (currentTail.x + dx));
+
+                   /*
+                      to remove diagonal checks.
+                      when (Y) [y == y] the x should be (x++ or --x) 
+                      when (x)[x == x] the y should be (y++ or --y)
+
+                      if (y == 0 && x == 00) continue;
+                      if ((dy < y || dy > y)&& dx != x) continue;
+                      if ((dx < x || dx > x)&& dy != y) continue;
+
+                           (0-1) 
+                      (-10) (00) (10) 
+                            (01) 
+                   */
+                    if (dy != 0 &&  dx != 0)
+                    {
+                        continue;
+                    }
+
+                    if (dx != 0 &&  dy != 0)
+                    {
+                        continue;
+                    }
+
+                    // Skip the current node (i and j will both be 0)
+                    if (newdirections.x == 0 && newdirections.y == 0)
+                    {
+                        continue;
+                    }
+
+                    if (newdirections.x < 0
+                        || newdirections.x >= gameState.height
+                        || newdirections.y < 0
+                        || newdirections.y >= gameState.width
+                        )
+                    {
+                        continue;
+                    }
+
+                    // if we there is a grass we should not move farward.
+                    // essentially we return false, meaning that there is no way to path find into a given location
+                    if (gameState.state[newdirections].scrapAmount == 0)
+                    {
+                        continue;
+                    }
+
+                    // if we already explored
+                    if (explorer.Contains(newdirections))
+                    {
+                        continue;
+                    }
+
+                    // all the un-occupied nodes are end nodes which we need to move.
+                    if (newdirections == destination)
+                    {
+                        // err($"({source.y},{source.x}) >>> "
+                        //     + $"({newdirections.y},{newdirections.x})" 
+                        //     + "TRUE"
+                        // );
+                        // return the same location saying that it can be reachable.
+                        return true;
+                    }
+
+                    // err($"({source.y},{source.x}) >>> "
+                    //     + $"({newdirections.y},{newdirections.x})"
+                    // );
+
+                    frontier.Push(newdirections);
+                    explorer.Push(newdirections);
+                }
+            }
+        }
+        return false;
     }
 }
